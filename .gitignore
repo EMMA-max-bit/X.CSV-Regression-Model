@@ -1,49 +1,149 @@
-# History files
-.Rhistory
-.Rapp.history
+# Set working directory
+setwd("C:/Users/Emma Tergunwa/Desktop/EMADA")
+getwd()
 
-# Session Data files
-.RData
-.RDataTmp
+# Load necessary libraries
+library(readr)
+library(ggplot2)
+library(tidydr)
 
-# User-specific files
-.Ruserdata
+# Load the data
+X <- read_csv("C:/Users/Emma Tergunwa/Desktop/ESTHER/x.csv")$x  # assuming the CSV has a column named 'x'
+head(X) # view the first few lines
+tail(X) # view the last few lines
+nrow(X) # Number of rows
+ncol(X) # Number of columns
+dim(X) # Rows and columns together
 
-# Example code in package build process
-*-Ex.R
+# ---Initialize, let m and n be the number of simulations and observations, then
+m <- 1000        # number of simulations
+n <- length(X)   # number of observations
 
-# Output files from R CMD build
-/*.tar.gz
+# --- True population parameters known
+beta0_true <- 3
+beta1_true <- 5
 
-# Output files from R CMD check
-/*.Rcheck/
+# Storage for estimated coefficients
+beta0_hat <- numeric(m) # store intercept estimate for run j
+beta1_hat <- numeric(m) # store slope estimate for run j
 
-# RStudio files
-.Rproj.user/
 
-# produced vignettes
-vignettes/*.html
-vignettes/*.pdf
+# --- Simulation loop ---
+set.seed(123)  # for reproducibility
+for (j in 1:m) {
+  u <- rnorm(n, mean = 0, sd = 1)
+  y <- beta0_true + beta1_true * X + u
+  model <- lm(y ~ X)
+  beta0_hat[j] <- coef(model)[1]
+  beta1_hat[j] <- coef(model)[2]
+}
 
-# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
-.httr-oauth
+# --- Results summary ---
+mean_beta0 <- mean(beta0_hat)
+mean_beta1 <- mean(beta1_hat)
+var_beta0 <- var(beta0_hat)
+var_beta1 <- var(beta1_hat)
 
-# knitr and R markdown default cache directories
-*_cache/
-/cache/
+cat("Mean of beta0_hat:", mean_beta0, "\n")
+cat("Mean of beta1_hat:", mean_beta1, "\n")
+cat("Variance of beta0_hat:", var_beta0, "\n")
+cat("Variance of beta1_hat:", var_beta1, "\n")
 
-# Temporary files created by R markdown
-*.utf8.md
-*.knit.md
+# --- Simulate the sampling distributions for ˆbeta0 and ˆbeta1 by doing the following steps m = 1000 times
+# 1 Generate random errors u from the N(0,1) distribution.
+for (j in 1:m) {
+  u <- rnorm(n, mean = 0, sd = 1)
+  y <- 3 + 5*X + u
+}
 
-# R Environment Variables
-.Renviron
+# --- 2. Generate values for y using u, the ﬁxed x, and the true population parameters
+# --- True population parameters
+beta0 <- 3
+beta1 <- 5
+y <- beta0 + beta1 * X + u  # --- Generate dependent variable y   
+     
+# --- see first few values   
+head(y)           
 
-# pkgdown site
-docs/
+# ---3--- Run a regression of y on x
+# --- Run regression of y on x
+model <- lm(y ~ X)
 
-# translation temp files
-po/*~
+# View summary of the regression results
+summary(model)
 
-# RStudio Connect folder
-rsconnect/
+# --- Just coefficients model to check intercept
+coef(model)
+
+# --- to visualize regression line (optional)
+plot(X, y, main = "Regression of y on X", col = "red", pch = 19)
+abline(model, col = "green", lwd = 2)
+
+# --- 4 Record your OLS estimates
+for (j in 1:m) {
+  u <- rnorm(n, mean = 0, sd = 1)
+  y <- 3 + 5*X + u
+  model <- lm(y ~ X)
+  
+# ---record the OLS estimates for this simulation
+beta0_hat[j] <- coef(model)[1]   # intercept (̂beta0)
+beta1_hat[j] <- coef(model)[2]   # slope (̂beta1)
+}
+
+# --- Visualize sampling distributions beta_0 and beta_1
+par(mfrow = c(1, 2))
+hist(beta0_hat, main = expression("Sampling Distribution of " ~ beta0),
+     xlab = expression(beta0), col = "orange", border = "white")
+hist(beta1_hat, main = expression("Sampling Distribution of " ~ beta1),
+     xlab = expression(beta1), col = "darkgreen", border = "white")
+
+# --- first few stored values and the total count ( 1000).
+head(beta0_hat)
+head(beta1_hat)
+length(beta0_hat)
+
+
+# --- kernel density plot
+# --- Kernel Density Plots for Sampling Distributions ---
+# two plots side by side
+par(mfrow = c(1, 2)) 
+
+# Density plot for beta0_hat
+plot(density(beta0_hat),
+     main = "Kernel Density of beta0_hat",
+     xlab = "beta0_hat",
+     col = "blue", lwd = 2)
+abline(v = mean(beta0_hat), col = "red", lwd = 2, lty = 2)   # mean of beta0_hat
+abline(v = 3, col = "darkgreen", lwd = 2)                    # true beta0 = 3
+legend("topright", legend = c("Mean of beta0_hat", "True beta0 = 3"),
+       col = c("red", "darkgreen"), lty = c(2,1), bty = "n")
+
+# Density plot for beta1_hat
+plot(density(beta1_hat),
+     main = "Kernel Density of beta1_hat",
+     xlab = "beta1_hat",
+     col = "purple", lwd = 2)
+abline(v = mean(beta1_hat), col = "red", lwd = 2, lty = 2)   # mean of beta1_hat
+abline(v = 5, col = "darkgreen", lwd = 2)                    # true beta1 = 5
+legend("topright", legend = c("Mean of beta1_hat", "True beta1 = 5"),
+       col = c("red", "darkgreen"), lty = c(2,1), bty = "n")
+
+# --- (b) Repeat using only the first 5 observations ---
+X_small <- X[1:5]   # Use only first 5 observations
+n <- length(X_small)
+
+# --- c1 Full Sample, Exponential Errors
+u <- rexp(n, rate = 1) - 1  # mean-adjusted exponential errors
+
+X_small <- X[1:5]
+n <- length(X_small)
+
+# --- Then repeat with exponential errors
+for (j in 1:m) {
+  u <- rexp(n, rate = 1) - 1
+  y <- beta0_true + beta1_true * X_small + u
+  model <- lm(y ~ X_small)
+  beta0[j] <- coef(model)[1]
+  beta1[j] <- coef(model)[2]
+}
+
